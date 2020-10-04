@@ -79,6 +79,14 @@ DATABASES = {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
     }
+    # 'default': {
+    #     'ENGINE': 'django.db.backends.postgresql',
+    #     'NAME': 'hicomf',
+    #     'USER': 'dungdev1',
+    #     'PASSWORD': 'dev15dungko',
+    #     'HOST': '127.0.0.1',
+    #     'PORT': '5432',
+    # }
 }
 
 
@@ -120,4 +128,4 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
-AUTH_USER_MODEL = 'mains.CustomUser'
+# AUTH_USER_MODEL = 'mains.CustomUser'
