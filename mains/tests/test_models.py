@@ -16,31 +16,46 @@ class ProfileModelTest(TestCase):
         # Create user.
         u1 = User.objects.create_user(
             username="dungdev1", password="12345", first_name="Dung", last_name="Nguyen")
-        u2 = User(username="1712371", password="12345", first_name="Dung", last_name="Nguyen")
-        u2.save()
+        u2 = User.objects.create_user(
+            username="1712371", password="12345", first_name="Dung", last_name="Nguyen")
+
+        # Update profile
+        p1 = Profile.objects.get(user=u1)
+        p1.bio = "Hello World"
+        p1.birthday = date(1999, 2, 10)
+        p1.relationship = "Single"
+        p1.address.add(a1)
+        p1.save()
+
+        p2 = Profile.objects.get(user=u2)
+        p2.bio = "Hello World"
+        p2.birthday = date(1999, 10, 10)
+        p2.relationship = "Single"
+        p2.address.add(a1)
+        p2.save()
 
         # Create Profile
-        p1 = Profile(
-            bio="Hello World",
-            birthday=date(1999, 2, 10),
-            relationship="Single",
-            email="dungnguyen9599@gmail.com",
-            phone_number="0339561922",
-            user=u1
-        )
-        p1.save()
-        p1.address.add(a1)
+        # p1 = Profile(
+        #     bio="Hello World",
+        #     birthday="Hello World",
+        #     relationship="Single",
+        #     email="dungnguyen9599@gmail.com",
+        #     phone_number="0339561922",
+        #     user=u1
+        # )
+        # p1.save()
+        # p1.address.add(a1)
 
-        p2 = Profile(
-            bio="Hello World",
-            birthday=date(1999, 10, 10),
-            relationship="Single",
-            email="dungnguyen9599@gmail.com",
-            phone_number="0339561922",
-            user=u2
-        )
-        p2.save()
-        p2.address.add(a1)    
+        # p2 = Profile(
+        #     bio="Hello World",
+        #     birthday=date(1999, 10, 10),
+        #     relationship="Single",
+        #     email="dungnguyen9599@gmail.com",
+        #     phone_number="0339561922",
+        #     user=u2
+        # )
+        # p2.save()
+        # p2.address.add(a1)    
 
     def test_year_old(self):
         u1 = User.objects.get(username="dungdev1")

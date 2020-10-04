@@ -4,6 +4,13 @@ from django.utils import timezone
 
 from django.core.exceptions import ValidationError
 
+from .signals import (
+    friendship_request_created,
+    friendship_request_declined,
+    friendship_request_accepted,
+    friendship_request_cancelled
+)
+
 
 class Address(models.Model):
     city = models.CharField(max_length=50)
@@ -87,10 +94,22 @@ class FriendshipRequest(models.Model):
         "Accept friend request, add friendship between two user"
         Friendship.objects.befriend(self.from_user, self.to_user)
 
+        friendship_request_accepted.send(sender=self.__class__)
+        
         self.delete() # delete request when successful accepting
 
     def decline(self):
+        "Delete when request is declined by to_user"
+        friendship_request_declined.send(sender=self.__class__)
+
         self.delete() # delete request when request is declined
+
+    def cancel(self):
+        "Delete when request is cancelled by from_user"
+        friendship_request_cancelled.send(sender=self.__class__)
+
+        self.delete()
+
 
 
 # Use this manager to add extra methods for Friendship model ("table-level")
