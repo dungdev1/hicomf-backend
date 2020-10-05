@@ -143,3 +143,52 @@ class Friendship(models.Model):
 
     def friend_count(self):
         return self.friends.count()
+
+
+class Job(models.Model):
+    position = models.CharField(max_length=100)
+    company = models.CharField(max_length=100)
+    description = models.CharField(max_length=200)
+    city = models.CharField(max_length=100)
+    starting_month = models.IntegerField()
+    starting_year = models.IntegerField()
+    ending_month = models.IntegerField(null=True, blank=True)
+    ending_year = models.IntegerField(null=True, blank=True)
+    still_working = models.BooleanField(default=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="jobs")
+    
+
+    def __str__(self):
+        if self.ending_month is None and self.ending_year is None:
+            return f"{self.position} at {self.company} ({self.starting_month}/{self.starting_year} - now)"
+        return f"{self.position} at {self.company} ({self.starting_month}/{self.starting_year} - {self.ending_month}/{self.ending_year})"
+
+    def clean(self):
+        if self.ending_month and self.ending_year:
+            if self.ending_year < self.starting_year:
+                raise ValidationError("The starting year must be less than the ending year")
+            if self.ending_year == self.starting_year and self.ending_month < self.starting_month:
+                raise ValidationError("Value error")
+
+    def save(self, *args, **kwargs):
+        self.clean()
+
+        if self.ending_month is None and self.ending_year is None:
+            self.still_working = True
+
+        super().save(*args, **kwargs)
+
+    def get_working_time(self):
+        ending_month, ending_year = None, None
+        if self.ending_month == None and self.ending_year == None:
+            ending_month = timezone.now().month
+            ending_year = timezone.now().year
+        else:
+            ending_month = self.ending_month
+            ending_year = self.ending_year
+
+        if ending_month < self.starting_month:
+            num_years = ending_year - self.starting_year - 1
+            num_months = ending_month + (12 - self.starting_month)
+            return (num_years, num_months)
+        return (ending_year - self.starting_year, ending_month - self.starting_month)
