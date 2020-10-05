@@ -6,7 +6,8 @@ from mains.models import (
     Address, 
     Friendship, 
     FriendshipRequest,
-    Job
+    Job,
+    Education
 )
 
 from datetime import date
@@ -177,3 +178,24 @@ class JobModelTest(TestCase):
         self.assertEqual(j1.get_working_time(), (12, 8))
         self.assertEqual(j2.get_working_time(), (11, 10))
         self.assertEqual(j3.get_working_time(), (1, 8))
+
+
+class EducationModelTest(TestCase):
+
+    # setUp
+    def setUp(self):
+        u = User.objects.create_user("dungdev1", password="12345", first_name="Dung", last_name="Nguyen")
+        e1 = Education(
+            school_name="University of Science",
+            starting_year=2017,
+            ending_year=2021,
+            description="Senior Student",
+            concentration="Computer science",
+            degree="Barchelor",
+            user=u
+        )
+        e1.save()
+
+    def test_validated_data(self):
+        u = User.objects.get(username="dungdev1")
+        print(u.educations.all()[0])

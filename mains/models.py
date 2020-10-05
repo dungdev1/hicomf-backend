@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser, User
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 
 from django.core.exceptions import ValidationError
 
@@ -156,6 +157,17 @@ class Job(models.Model):
     ending_year = models.IntegerField(null=True, blank=True)
     still_working = models.BooleanField(default=False)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="jobs")
+
+    class Privacy(models.TextChoices):
+        PUBLIC = 'P', _('Public')
+        FRIENDS = 'F', _('Friends')
+        ONLY_ME = 'O', _('Only me')
+
+    privacy = models.CharField(
+        max_length=2,
+        choices=Privacy.choices,
+        default=Privacy.PUBLIC,
+    )
     
 
     def __str__(self):
@@ -192,3 +204,45 @@ class Job(models.Model):
             num_months = ending_month + (12 - self.starting_month)
             return (num_years, num_months)
         return (ending_year - self.starting_year, ending_month - self.starting_month)
+
+    
+class Education(models.Model):
+    school_name = models.CharField(max_length=100)
+    starting_year = models.IntegerField()
+    ending_year = models.IntegerField(null=True, blank=True)
+    graduated = models.BooleanField(default=False)
+    description = models.TextField()
+    concentration = models.CharField(max_length=100)
+    degree = models.CharField(max_length=150, blank=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="educations")
+    
+
+    class Privacy(models.TextChoices):
+        PUBLIC = 'P', _('Public')
+        FRIENDS = 'F', _('Friends')
+        ONLY_ME = 'O', _('Only me')
+
+    privacy = models.CharField(
+        max_length=2,
+        choices=Privacy.choices,
+        default=Privacy.PUBLIC,
+    )
+
+    def __str__(self):
+        import string
+        if self.graduated:
+            if self.degree:
+                return f"{self.degree.capitalize()} of {string.capwords(self.concentration)}"
+            else:
+                return f"Studied {string.capwords(self.concentration)} at {string.capwords(self.school_name)}"
+        else:
+            return f"Studies {string.capwords(self.concentration)} at {string.capwords(self.school_name)}"
+
+    def clean(self):
+        if self.ending_year < self.starting_year:
+            raise ValidationError("The starting year must be greater than the ending year")
+
+    def save(self, *args, **kwargs):
+        self.clean()
+
+        super().save(*args, **kwargs)
