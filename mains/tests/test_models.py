@@ -2,9 +2,9 @@ from django.test import TestCase
 
 from django.contrib.auth.models import User
 from mains.models import (
-    Profile, 
-    Address, 
-    Friendship, 
+    Profile,
+    Address,
+    Friendship,
     FriendshipRequest,
     Job,
     Education
@@ -17,9 +17,6 @@ class ProfileModelTest(TestCase):
 
     def setUp(self):
 
-        # Create address.
-        a1 = Address.objects.create(city="Ho Chi Minh", district="5")
-
         # Create user.
         u1 = User.objects.create_user(
             username="dungdev1", password="12345", first_name="Dung", last_name="Nguyen")
@@ -31,60 +28,38 @@ class ProfileModelTest(TestCase):
         p1.bio = "Hello World"
         p1.birthday = date(1999, 2, 10)
         p1.relationship = "Single"
-        p1.address.add(a1)
         p1.save()
 
         p2 = Profile.objects.get(user=u2)
         p2.bio = "Hello World"
-        p2.birthday = date(1999, 10, 10)
+        p2.birthday = date(1999, 12, 20)
         p2.relationship = "Single"
-        p2.address.add(a1)
         p2.save()
-
-        # Create Profile
-        # p1 = Profile(
-        #     bio="Hello World",
-        #     birthday="Hello World",
-        #     relationship="Single",
-        #     email="dungnguyen9599@gmail.com",
-        #     phone_number="0339561922",
-        #     user=u1
-        # )
-        # p1.save()
-        # p1.address.add(a1)
-
-        # p2 = Profile(
-        #     bio="Hello World",
-        #     birthday=date(1999, 10, 10),
-        #     relationship="Single",
-        #     email="dungnguyen9599@gmail.com",
-        #     phone_number="0339561922",
-        #     user=u2
-        # )
-        # p2.save()
-        # p2.address.add(a1)    
 
     def test_year_old(self):
         u1 = User.objects.get(username="dungdev1")
         u2 = User.objects.get(username="1712371")
-        self.assertEquals(u1.basic_information.year_old, 21)
-        self.assertEquals(u2.basic_information.year_old, 20)
+        self.assertEquals(u1.profile.year_old, 21)
+        self.assertEquals(u2.profile.year_old, 20)
 
     def test_name(self):
         u = User.objects.get(username="dungdev1")
-        p = u.basic_information
+        p = u.profile
         p.set_first_name("Dung")
         p.set_last_name("Nguyen")
         self.assertEquals(p.full_name, "Dung Nguyen")
 
 
 class FriendshipModelTest(TestCase):
-    
+
     # Setup
     def setUp(self):
-        u1 = User.objects.create_user("dungdev1", password="12345", first_name="Dung", last_name="Nguyen")
-        u2 = User.objects.create_user("1712371", password="12345", first_name="Dung", last_name="Nguyen")
-        u3 = User.objects.create_user("1234", password="12345", first_name="Dung", last_name="Nguyen")
+        u1 = User.objects.create_user(
+            "dungdev1", password="12345", first_name="Dung", last_name="Nguyen")
+        u2 = User.objects.create_user(
+            "1712371", password="12345", first_name="Dung", last_name="Nguyen")
+        u3 = User.objects.create_user(
+            "1234", password="12345", first_name="Dung", last_name="Nguyen")
 
         f1 = Friendship(user=u1)
         f2 = Friendship(user=u2)
@@ -129,9 +104,12 @@ class FriendshipRequestModelTest(TestCase):
 
     # Setup
     def setUp(self):
-        u1 = User.objects.create_user("dungdev1", password="12345", first_name="Dung", last_name="Nguyen")
-        u2 = User.objects.create_user("1712371", password="12345", first_name="Dung", last_name="Nguyen")
-        u3 = User.objects.create_user("1234", password="12345", first_name="Dung", last_name="Nguyen")
+        u1 = User.objects.create_user(
+            "dungdev1", password="12345", first_name="Dung", last_name="Nguyen")
+        u2 = User.objects.create_user(
+            "1712371", password="12345", first_name="Dung", last_name="Nguyen")
+        u3 = User.objects.create_user(
+            "1234", password="12345", first_name="Dung", last_name="Nguyen")
 
         f1 = Friendship.objects.create(user=u1)
         f2 = Friendship.objects.create(user=u2)
@@ -158,13 +136,17 @@ class FriendshipRequestModelTest(TestCase):
 
 
 class JobModelTest(TestCase):
-    
+
     # Setup
     def setUp(self):
-        u = User.objects.create_user("dungdev1", password="12345", first_name="Dung", last_name="Nguyen")
-        j1 = Job.objects.create(user=u, starting_month=2, starting_year=2008, ending_month=10, ending_year=2020)
-        j2 = Job.objects.create(user=u, starting_month=12, starting_year=2008, ending_month=10, ending_year=2020)
-        j3 = Job(user=u, starting_month=2, starting_year=2019, position="Software developer", company="NET", city="HCMC")
+        u = User.objects.create_user(
+            "dungdev1", password="12345", first_name="Dung", last_name="Nguyen")
+        j1 = Job.objects.create(
+            user=u, starting_month=2, starting_year=2008, ending_month=10, ending_year=2020)
+        j2 = Job.objects.create(
+            user=u, starting_month=12, starting_year=2008, ending_month=10, ending_year=2020)
+        j3 = Job(user=u, starting_month=2, starting_year=2019,
+                 position="Software developer", company="NET", city="HCMC")
         j3.save()
         # j4 = Job.objects.create(starting_month=2, starting_year=2008, ending_month=10, ending_year=2007)
 
@@ -184,7 +166,8 @@ class EducationModelTest(TestCase):
 
     # setUp
     def setUp(self):
-        u = User.objects.create_user("dungdev1", password="12345", first_name="Dung", last_name="Nguyen")
+        u = User.objects.create_user(
+            "dungdev1", password="12345", first_name="Dung", last_name="Nguyen")
         e1 = Education(
             school_name="University of Science",
             starting_year=2017,

@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser, User
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+import uuid
 
 from django.core.exceptions import ValidationError
 
@@ -12,18 +13,8 @@ from .signals import (
     friendship_request_cancelled
 )
 
-
-class Address(models.Model):
-    city = models.CharField(max_length=50)
-    district = models.CharField(max_length=50)
-    street = models.CharField(max_length=50)
-    house_number = models.CharField(max_length=15)
-
-    def __str__(self):
-        return f"{self.house_number}, {self.street}, {self.district}, {self.city}."
-
-
 class Profile(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     first_name = models.CharField(max_length=30)
     last_name = models.CharField(max_length=30)
     bio = models.CharField(max_length=100)
@@ -35,11 +26,10 @@ class Profile(models.Model):
         ]
     )
     birthday = models.DateField(null=True)
-    relationship = models.CharField(max_length=20)
-    email = models.CharField(max_length=20)
+    relationship = models.CharField(max_length=50)
+    email = models.CharField(max_length=50)
     phone_number = models.CharField(max_length=12)
-    address = models.ManyToManyField(Address)
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="basic_information")
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile", to_field='username')
 
     @property
     def year_old(self):
@@ -69,9 +59,22 @@ class Profile(models.Model):
         return self.full_name
 
 
+class Address(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    city = models.CharField(max_length=50)
+    district = models.CharField(max_length=50)
+    street = models.CharField(max_length=50)
+    house_number = models.CharField(max_length=15)
+    profile = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='addresses')
+
+    def __str__(self):
+        return f"{self.house_number}, {self.street}, {self.district}, {self.city}."
+
+
 class FriendshipRequest(models.Model):
-    from_user = models.ForeignKey(User, related_name="invitations_from", on_delete=models.CASCADE)
-    to_user = models.ForeignKey(User, related_name="invitations_to", on_delete=models.CASCADE)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    from_user = models.ForeignKey(User, related_name="invitations_from", on_delete=models.CASCADE, to_field='username')
+    to_user = models.ForeignKey(User, related_name="invitations_to", on_delete=models.CASCADE, to_field='username')
     message = models.CharField(max_length=200, blank=True)
     created = models.DateTimeField(default=timezone.now, editable=False)
 
@@ -137,7 +140,8 @@ class FriendshipManager(models.Manager):
 
 
 class Friendship(models.Model):
-    user = models.OneToOneField(User, related_name='friendship', on_delete=models.CASCADE)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.OneToOneField(User, related_name='friendship', on_delete=models.CASCADE, to_field='username')
     friends = models.ManyToManyField('self')
 
     objects = FriendshipManager()
@@ -147,6 +151,7 @@ class Friendship(models.Model):
 
 
 class Job(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     position = models.CharField(max_length=100)
     company = models.CharField(max_length=100)
     description = models.CharField(max_length=200)
@@ -156,7 +161,7 @@ class Job(models.Model):
     ending_month = models.IntegerField(null=True, blank=True)
     ending_year = models.IntegerField(null=True, blank=True)
     still_working = models.BooleanField(default=False)
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="jobs")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="jobs", to_field='username')
 
     class Privacy(models.TextChoices):
         PUBLIC = 'P', _('Public')
@@ -207,6 +212,7 @@ class Job(models.Model):
 
     
 class Education(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     school_name = models.CharField(max_length=100)
     starting_year = models.IntegerField()
     ending_year = models.IntegerField(null=True, blank=True)
@@ -214,7 +220,7 @@ class Education(models.Model):
     description = models.TextField()
     concentration = models.CharField(max_length=100)
     degree = models.CharField(max_length=150, blank=True)
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="educations")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="educations", to_field='username')
     
 
     class Privacy(models.TextChoices):
