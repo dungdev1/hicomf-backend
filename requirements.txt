@@ -5,3 +5,4 @@ requests==2.24.0
 djangorestframework==3.12.1
 cryptography==3.1.1
 PyJWT==1.7.1
+python-dotenv==0.14.0
