@@ -2,9 +2,11 @@ from functools import wraps
 import jwt
 
 from django.shortcuts import render
-from django.http import JsonResponse
+from django.http import JsonResponse, Http404
+from django.contrib.auth.models import User
 
-from rest_framework import status
+from rest_framework.views import APIView
+from rest_framework import status, exceptions
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
@@ -12,6 +14,7 @@ from rest_framework.permissions import AllowAny
 
 from mains.serializations import ProfileSerializer, AddressSerializer
 from mains.models import Profile, Address
+from mains.permissions import IsOwnerOrReadOnly
 
 
 # Validate scope
@@ -55,7 +58,7 @@ def requires_scope(required_scope):
 def api_root(request, format=None):
     return Response({
         'profiles': reverse('profile-list', request=request, format=format),
-        'addresses': reverse('address-list', request=request, format=format),
+        # 'addresses': reverse('address-list', request=request, format=format),
     })
 
 
@@ -66,82 +69,111 @@ def profile_list(request):
     """
     if request.method == 'GET':
         profiles = Profile.objects.all()
-        serializer = ProfileSerializer(profiles, many=True, context={'request': request})
+        serializer = ProfileSerializer(
+            profiles, many=True, context={'request': request})
         return Response(serializer.data)
 
     elif request.method == 'POST':
-        serializer = ProfileSerializer(data=request.data, context={'request': request})
+        serializer = ProfileSerializer(
+            data=request.data, context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-@api_view(['GET', 'PUT', 'DELETE'])
-def profile_detail(request, pk):
-    """
-    Retrieve, update and delete a user
-    """
-    try:
-        profile = Profile.objects.get(pk=pk)
-    except Profile.DoesNotExist:
-        return Response(status=status.HTTP_404_NOT_FOUND)
+class ProfileDetail(APIView):
+    permission_classes = [IsOwnerOrReadOnly]
 
-    if request.method == 'GET':
+    def get_object(self, pk):
+        try:
+            profile = Profile.objects.get(pk=pk)
+        except Profile.DoesNotExist:
+            raise Http404
+        self.check_object_permissions(self.request, profile)
+        return profile
+
+    def get(self, request, pk, format=None):
+        profile = self.get_object(pk)
         serializer = ProfileSerializer(profile, context={'request': request})
         return Response(serializer.data)
 
-    elif request.method == 'PUT':
-        serializer = ProfileSerializer(profile, data=request.data, context={'request': request})
+    def put(self, request, pk, format=None):
+        profile = self.get_object(pk)
+        serializer = ProfileSerializer(
+            profile, data=request.data, context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    elif request.method == 'DELETE':
+    def delete(self, request, pk, format=None):
+        profile = self.get_object(pk)
         profile.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 @api_view(['GET', 'POST'])
-def address_list(request):
-    """
-    Create a new address.
-    """
+def address_list(request, profile_pk):
+    # Check user is ouwner of address list
+    isOwner = True if request.user == User.objects.get(
+        profile=profile_pk) else False
+
     if request.method == 'GET':
-        addresses = Address.objects.all()
-        serializer = AddressSerializer(addresses, many=True, context={'request': request})
+        # Allow all authenticated user can get address data
+        addresses = Address.objects.all().filter(profile=profile_pk)
+        serializer = AddressSerializer(
+            addresses, many=True, context={'request': request})
         return Response(serializer.data)
 
-    elif request.method == 'POST':
-        serializer = AddressSerializer(data=request.data, context={'request': request})
-        if serializer.is_valid():
-            profile = Profile.objects.get(user=request.user)
-            serializer.save(profile=profile)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    if request.method == 'POST':
+        # Only onwer can add address to their addresses list
+        try:
+            if isOwner:
+                serializer = AddressSerializer(
+                    data=request.data, context={'request': request})
+                if serializer.is_valid():
+                    profile = Profile.objects.get(user=request.user)
+                    serializer.save(profile=profile)
+                    return Response(serializer.data, status=status.HTTP_201_CREATED)
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            raise exceptions.PermissionDenied
+        except exceptions.PermissionDenied as err:
+            return Response({"detail": str(err)}, status=status.HTTP_403_FORBIDDEN)
 
 
-@api_view(['GET', 'PUT', 'DELETE'])
-def address_detail(request, pk):
-    """
-    Retrieve, update and delete a address.
-    """
-    try:
-        address = Address.objects.get(pk=pk)
-    except Address.DoesNotExist:
-        return Response(status=status.HTTP_404_NOT_FOUND)
+class AddressDetail(APIView):
 
-    if request.method == 'GET':
+    permission_classes = [IsOwnerOrReadOnly]
+
+    def get_object(self, profile_pk, address_pk):
+        try:
+            profile = Profile.objects.get(id=profile_pk)
+            address = profile.addresses.get(id=address_pk)
+        except Profile.DoesNotExits:
+            raise Http404
+        except Address.DoesNotExist:
+            raise Http404
+        self.check_object_permissions(self.request, address.profile)
+        return address
+
+    def get(self, request, *args, **kwargs):
+        address = self.get_object(**kwargs)
         serializer = AddressSerializer(address, context={'request': request})
-        return Response(serializer.data)
+        url = request.build_absolute_uri(
+            reverse('address-detail', args=(address.profile.id, address.id)))
+        return Response({"url": url, **serializer.data})
 
-    elif request.method == 'PUT':
-        serializer = AddressSerializer(address, data=request.data, context={'request': request})
+    def put(self, request, *args, **kwargs):
+        address = self.get_object(**kwargs)
+        serializer = AddressSerializer(
+            address, data=request.data, context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    elif request.method == 'DELETE':
+    def delete(self, request, *args, **kwargs):
+        address = self.get_object(**kwargs)
         address.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

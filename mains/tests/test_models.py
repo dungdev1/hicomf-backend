@@ -142,10 +142,10 @@ class JobModelTest(TestCase):
         u = User.objects.create_user(
             "dungdev1", password="12345", first_name="Dung", last_name="Nguyen")
         j1 = Job.objects.create(
-            user=u, starting_month=2, starting_year=2008, ending_month=10, ending_year=2020)
+            profile=u.profile, starting_month=2, starting_year=2008, ending_month=10, ending_year=2020)
         j2 = Job.objects.create(
-            user=u, starting_month=12, starting_year=2008, ending_month=10, ending_year=2020)
-        j3 = Job(user=u, starting_month=2, starting_year=2019,
+            profile=u.profile, starting_month=12, starting_year=2008, ending_month=10, ending_year=2020)
+        j3 = Job(profile=u.profile, starting_month=2, starting_year=2019,
                  position="Software developer", company="NET", city="HCMC")
         j3.save()
         # j4 = Job.objects.create(starting_month=2, starting_year=2008, ending_month=10, ending_year=2007)

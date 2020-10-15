@@ -15,9 +15,9 @@ from .signals import (
 
 class Profile(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    first_name = models.CharField(max_length=30)
-    last_name = models.CharField(max_length=30)
-    bio = models.CharField(max_length=100)
+    first_name = models.CharField(max_length=30, blank=True)
+    last_name = models.CharField(max_length=30, blank=True)
+    bio = models.CharField(max_length=100, blank=True)
     gender = models.CharField(
         max_length=6,
         choices=[
@@ -26,9 +26,9 @@ class Profile(models.Model):
         ]
     )
     birthday = models.DateField(null=True)
-    relationship = models.CharField(max_length=50)
-    email = models.CharField(max_length=50)
-    phone_number = models.CharField(max_length=12)
+    relationship = models.CharField(max_length=50, blank=True)
+    email = models.CharField(max_length=50, blank=True)
+    phone_number = models.CharField(max_length=12, blank=True)
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile", to_field='username')
 
     @property
@@ -62,9 +62,9 @@ class Profile(models.Model):
 class Address(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     city = models.CharField(max_length=50)
-    district = models.CharField(max_length=50)
-    street = models.CharField(max_length=50)
-    house_number = models.CharField(max_length=15)
+    district = models.CharField(max_length=50, blank=True)
+    street = models.CharField(max_length=50, blank=True)
+    house_number = models.CharField(max_length=15, blank=True)
     profile = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='addresses')
 
     def __str__(self):
@@ -161,20 +161,8 @@ class Job(models.Model):
     ending_month = models.IntegerField(null=True, blank=True)
     ending_year = models.IntegerField(null=True, blank=True)
     still_working = models.BooleanField(default=False)
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="jobs", to_field='username')
-
-    class Privacy(models.TextChoices):
-        PUBLIC = 'P', _('Public')
-        FRIENDS = 'F', _('Friends')
-        ONLY_ME = 'O', _('Only me')
-
-    privacy = models.CharField(
-        max_length=2,
-        choices=Privacy.choices,
-        default=Privacy.PUBLIC,
-    )
+    profile = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name="jobs")
     
-
     def __str__(self):
         if self.ending_month is None and self.ending_year is None:
             return f"{self.position} at {self.company} ({self.starting_month}/{self.starting_year} - now)"
