@@ -159,13 +159,10 @@ class AddressDetail(APIView):
 
     def get_object(self, profile_pk, address_pk):
         try:
-            profile = Profile.objects.get(id=profile_pk)
-            address = profile.addresses.get(id=address_pk)
-        except Profile.DoesNotExist:
+            address = Address.objects.filter(profile=profile_pk).get(id=address_pk)
+        except ValidationError:
             raise Http404
         except Address.DoesNotExist:
-            raise Http404
-        except ValidationError:
             raise Http404
         self.check_object_permissions(self.request, address.profile)
         return address
@@ -228,9 +225,8 @@ class JobDetail(APIView):
 
     def get_object(self, profile_pk, job_pk):
         try:
-            profile = Profile.objects.get(id=profile_pk)
-            job = profile.jobs.get(id=job_pk)
-        except Profile.DoesNotExist:
+            job = Job.objects.filter(profile=profile_pk).get(id=job_pk)
+        except ValidationError:
             raise Http404
         except Job.DoesNotExist:
             raise Http404
