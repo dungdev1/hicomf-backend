@@ -152,9 +152,9 @@ class Friendship(models.Model):
 
 class Job(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    position = models.CharField(max_length=100)
-    company = models.CharField(max_length=100)
-    description = models.CharField(max_length=200)
+    position = models.CharField(max_length=200)
+    company = models.CharField(max_length=200)
+    description = models.CharField(max_length=300, blank=True)
     city = models.CharField(max_length=100)
     starting_month = models.IntegerField()
     starting_year = models.IntegerField()
@@ -164,7 +164,7 @@ class Job(models.Model):
     profile = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name="jobs")
     
     def __str__(self):
-        if self.ending_month is None and self.ending_year is None:
+        if self.still_working:
             return f"{self.position} at {self.company} ({self.starting_month}/{self.starting_year} - now)"
         return f"{self.position} at {self.company} ({self.starting_month}/{self.starting_year} - {self.ending_month}/{self.ending_year})"
 
@@ -185,7 +185,7 @@ class Job(models.Model):
 
     def get_working_time(self):
         ending_month, ending_year = None, None
-        if self.ending_month == None and self.ending_year == None:
+        if self.still_working:
             ending_month = timezone.now().month
             ending_year = timezone.now().year
         else:

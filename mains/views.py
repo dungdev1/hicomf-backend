@@ -4,6 +4,7 @@ import jwt
 from django.shortcuts import render
 from django.http import JsonResponse, Http404
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 
 from rest_framework.views import APIView
 from rest_framework import status, exceptions
@@ -12,8 +13,8 @@ from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from rest_framework.permissions import AllowAny
 
-from mains.serializations import ProfileSerializer, AddressSerializer
-from mains.models import Profile, Address
+from mains.serializations import ProfileSerializer, AddressSerializer, JobSerializer
+from mains.models import Profile, Address, Job, Education
 from mains.permissions import IsOwnerOrReadOnly
 
 
@@ -88,6 +89,8 @@ class ProfileDetail(APIView):
     def get_object(self, pk):
         try:
             profile = Profile.objects.get(pk=pk)
+        except ValidationError:
+            raise Http404
         except Profile.DoesNotExist:
             raise Http404
         self.check_object_permissions(self.request, profile)
@@ -116,12 +119,15 @@ class ProfileDetail(APIView):
 @api_view(['GET', 'POST'])
 def address_list(request, profile_pk):
     # Check user is ouwner of address list
-    isOwner = True if request.user == User.objects.get(
-        profile=profile_pk) else False
+    try:
+        isOwner = True if request.user == User.objects.get(
+            profile=profile_pk) else False
+    except ValidationError:
+        raise Http404
 
     if request.method == 'GET':
         # Allow all authenticated user can get address data
-        addresses = Address.objects.all().filter(profile=profile_pk)
+        addresses = Address.objects.filter(profile=profile_pk)
         serializer = AddressSerializer(
             addresses, many=True, context={'request': request})
         return Response(serializer.data)
@@ -150,9 +156,11 @@ class AddressDetail(APIView):
         try:
             profile = Profile.objects.get(id=profile_pk)
             address = profile.addresses.get(id=address_pk)
-        except Profile.DoesNotExits:
+        except Profile.DoesNotExist:
             raise Http404
         except Address.DoesNotExist:
+            raise Http404
+        except ValidationError:
             raise Http404
         self.check_object_permissions(self.request, address.profile)
         return address
@@ -176,4 +184,72 @@ class AddressDetail(APIView):
     def delete(self, request, *args, **kwargs):
         address = self.get_object(**kwargs)
         address.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class JobList(APIView):
+    """
+    List all jobs, or create a new job.
+    """
+
+    def get(self, request, profile_pk):
+        try:
+            jobs = Job.objects.filter(profile=profile_pk)
+            serializer = JobSerializer(
+                jobs, many=True, context={'request': request})
+            return Response(serializer.data)
+        except ValidationError as err:
+            raise Http404
+
+    def post(self, request, profile_pk):
+        try:
+            if request.user == User.objects.get(profile=profile_pk):
+                serializer = JobSerializer(
+                    data=request.data, context={'request': request})
+                if serializer.is_valid():
+                    profile = Profile.objects.get(user=request.user)
+                    serializer.save(profile=profile)
+                    return Response(serializer.data, status=status.HTTP_201_CREATED)
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            raise exceptions.PermissionDenied
+        except ValidationError:
+            raise Http404
+        except exceptions.PermissionDenied as err:
+            return Response({"detail": str(err)}, status=status.HTTP_403_FORBIDDEN)
+
+
+class JobDetail(APIView):
+    permission_classes = [IsOwnerOrReadOnly]
+
+    def get_object(self, profile_pk, job_pk):
+        try:
+            profile = Profile.objects.get(id=profile_pk)
+            job = profile.jobs.get(id=job_pk)
+        except Profile.DoesNotExist:
+            raise Http404
+        except Job.DoesNotExist:
+            raise Http404
+        # Check if the profile of this job is belong to the request user
+        self.check_object_permissions(self.request, job.profile)
+        return job
+
+    def get(self, request, profile_pk, job_pk):
+        job = self.get_object(profile_pk, job_pk)
+        serializer = JobSerializer(job, context={'request': request})
+        url = request.build_absolute_uri(
+            reverse('job-detail', args=(job.profile.id, job.id)))
+        return Response({'url': url, **serializer.data})
+
+    def put(self, request, profile_pk, job_pk):
+        job = self.get_object(profile_pk, job_pk)
+        serializer = JobSerializer(
+            job, data=request.data, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, profile_pk, job_pk):
+        job = self.get_object(profile_pk, job_pk)
+        job.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)

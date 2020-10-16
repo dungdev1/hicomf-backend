@@ -11,6 +11,10 @@ urlpatterns = [
          views.address_list, name='address-list'),
     path('api/v1/profiles/<str:profile_pk>/addresses/<str:address_pk>/',
          views.AddressDetail.as_view(), name='address-detail'),
+    path('api/v1/profiles/<str:profile_pk>/jobs/',
+         views.JobList.as_view(), name='job-list'),
+    path('api/v1/profiles/<str:profile_pk>/jobs/<str:job_pk>/',
+         views.JobDetail.as_view(), name='job-detail')
 ]
 
 urlpatterns = format_suffix_patterns(urlpatterns)
