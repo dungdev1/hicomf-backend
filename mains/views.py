@@ -13,7 +13,12 @@ from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from rest_framework.permissions import AllowAny
 
-from mains.serializations import ProfileSerializer, AddressSerializer, JobSerializer
+from mains.serializations import (
+    ProfileSerializer,
+    AddressSerializer,
+    JobSerializer,
+    EducationSerializer
+)
 from mains.models import Profile, Address, Job, Education
 from mains.permissions import IsOwnerOrReadOnly
 
@@ -252,4 +257,70 @@ class JobDetail(APIView):
     def delete(self, request, profile_pk, job_pk):
         job = self.get_object(profile_pk, job_pk)
         job.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class EducationList(APIView):
+    """
+    List all educations, or create a new education instance.
+    """
+
+    def get(self, request, profile_pk):
+        try:
+            educations = Education.objects.filter(profile=profile_pk)
+            serializer = EducationSerializer(
+                educations, many=True, context={'request': request})
+            return Response(serializer.data)
+        except ValidationError:
+            raise Http404
+
+    def post(self, request, profile_pk):
+        try:
+            if request.user == User.objects.get(profile=profile_pk):
+                serializer = EducationSerializer(
+                    data=request.data, context={'request': request})
+                if serializer.is_valid():
+                    profile = Profile.objects.get(user=request.user)
+                    serializer.save(profile=profile)
+                    return Response(serializer.data, status=status.HTTP_201_CREATED)
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            raise exceptions.PermissionDenied
+        except ValidationError:
+            raise Http404
+        except exceptions.PermissionDenied as err:
+            return Response({"detail": str(err)}, status=status.HTTP_403_FORBIDDEN)
+
+
+class EducationDetail(APIView):
+    permission_classes = [IsOwnerOrReadOnly]
+
+    def get_object(self, profile_pk, edu_pk):
+        try:
+            edu = Education.objects.filter(profile=profile_pk).get(id=edu_pk)
+        except ValidationError:
+            raise Http404
+        except Education.DoesNotExist:
+            raise Http404
+        self.check_object_permissions(self.request, edu.profile)
+        return edu
+
+    def get(self, request, *args, **kwargs):
+        edu = self.get_object(**kwargs)
+        serializer = EducationSerializer(edu, context={'request': request})
+        url = request.build_absolute_uri(
+            reverse('education-detail', args=(edu.profile.id, edu.id)))
+        return Response({'url': url, **serializer.data})
+
+    def put(self, request, *args, **kwargs):
+        edu = self.get_object(**kwargs)
+        serializer = EducationSerializer(
+            edu, data=request.data, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, *args, **kwargs):
+        edu = self.get_object(**kwargs)
+        edu.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)

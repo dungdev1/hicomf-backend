@@ -14,7 +14,11 @@ urlpatterns = [
     path('api/v1/profiles/<str:profile_pk>/jobs/',
          views.JobList.as_view(), name='job-list'),
     path('api/v1/profiles/<str:profile_pk>/jobs/<str:job_pk>/',
-         views.JobDetail.as_view(), name='job-detail')
+         views.JobDetail.as_view(), name='job-detail'),
+    path('api/v1/profiles/<str:profile_pk>/educations/',
+         views.EducationList.as_view(), name='education-list'),
+    path('api/v1/profiles/<str:profile_pk>/educations/<str:edu_pk>/',
+         views.EducationDetail.as_view(), name='education-detail'),
 ]
 
 urlpatterns = format_suffix_patterns(urlpatterns)
