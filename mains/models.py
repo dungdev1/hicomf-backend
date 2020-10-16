@@ -202,13 +202,13 @@ class Job(models.Model):
 class Education(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     school_name = models.CharField(max_length=100)
-    starting_year = models.IntegerField()
-    ending_year = models.IntegerField(null=True, blank=True)
+    starting_year = models.IntegerField(null=True)
+    ending_year = models.IntegerField(null=True)
     graduated = models.BooleanField(default=False)
-    description = models.TextField()
+    description = models.TextField(blank=True)
     concentration = models.CharField(max_length=100)
     degree = models.CharField(max_length=150, blank=True)
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="educations", to_field='username')
+    profile = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name="educations")
     
 
     class Privacy(models.TextChoices):
@@ -233,7 +233,7 @@ class Education(models.Model):
             return f"Studies {string.capwords(self.concentration)} at {string.capwords(self.school_name)}"
 
     def clean(self):
-        if self.ending_year < self.starting_year:
+        if self.ending_year and self.ending_year < self.starting_year:
             raise ValidationError("The starting year must be greater than the ending year")
 
     def save(self, *args, **kwargs):
