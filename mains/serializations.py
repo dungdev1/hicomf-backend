@@ -1,4 +1,8 @@
-from mains.models import Profile, Address, Job, Education
+from mains.models import (
+    Profile, Address, Job, Education,
+    PhotoAlbum, Photo,
+    Post, Like, Share, Comment
+)
 # from django.contrib.auth.models import User
 from rest_framework import serializers
 from rest_framework.reverse import reverse
@@ -37,16 +41,28 @@ class EducationHyperlink(serializers.HyperlinkedRelatedField):
         return reverse(view_name, kwargs=url_kwargs, request=request, format=format)
 
 
+class AlbumHyperlink(serializers.HyperlinkedRelatedField):
+    view_name = 'album-detail'
+
+    def get_url(self, obj, view_name, request, format):
+        url_kwargs = {
+            'profile_pk': obj.profile.id,
+            'album_pk': obj.id
+        }        
+        return reverse(view_name, kwargs=url_kwargs, request=request, format=format)
+
+
 class ProfileSerializer(serializers.HyperlinkedModelSerializer):
     # addresses = serializers.HyperlinkedRelatedField(view_name='address-detail', read_only=True, many=True)
     addresses = AddressHyperlink(read_only=True, many=True)
     jobs = JobHyperlink(read_only=True, many=True)
     educations = EducationHyperlink(read_only=True, many=True)
+    albums = AlbumHyperlink(read_only=True, many=True)
 
     class Meta:
         model = Profile
-        fields = ['url', 'id', 'first_name', 'last_name', 'bio', 'gender',
-                  'birthday', 'relationship', 'email', 'phone_number', 'addresses', 'jobs', 'educations']
+        fields = ['url', 'id', 'first_name', 'last_name', 'bio', 'gender', 'birthday', 'relationship',
+                  'email', 'phone_number', 'addresses', 'jobs', 'educations', 'albums']
 
 
 class AddressSerializer(serializers.HyperlinkedModelSerializer):
@@ -82,3 +98,34 @@ class EducationSerializer(serializers.HyperlinkedModelSerializer):
         model = Education
         fields = ['url', 'id', 'privacy', 'school_name', 'starting_year', 'ending_year',
                   'graduated', 'description', 'concentration', 'degree', 'profile']
+
+
+class PostSerializer(serializers.HyperlinkedModelSerializer):
+    photos = serializers.HyperlinkedRelatedField(
+        view_name='photo-detail', many=True, read_only=True)
+
+    class Meta:
+        model = Post
+        fields = ['url', 'id', 'caption', 'time', 'photos',
+                  'num_likes', 'num_comments', 'num_shares']
+
+
+class AlbumSerializer(serializers.HyperlinkedModelSerializer):
+    profile = serializers.HyperlinkedRelatedField(
+        view_name='profile-detail', read_only=True)
+    photos = serializers.HyperlinkedRelatedField(
+        view_name='photo-detail', read_only=True, many=True)
+    url = AlbumHyperlink(read_only=True)
+
+    class Meta:
+        model = PhotoAlbum
+        fields = ['url', 'id', 'name', 'num_photos', 'photos', 'profile']
+
+
+class PhotoSerializer(serializers.HyperlinkedModelSerializer):
+    post = serializers.HyperlinkedRelatedField(
+        view_name='post-detail', read_only=True)
+
+    class Meta:
+        model = Photo
+        fields = ['url', 'id', 'photo_url', 'post']

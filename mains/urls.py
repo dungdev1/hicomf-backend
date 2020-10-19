@@ -19,6 +19,13 @@ urlpatterns = [
          views.EducationList.as_view(), name='education-list'),
     path('api/v1/profiles/<str:profile_pk>/educations/<str:edu_pk>/',
          views.EducationDetail.as_view(), name='education-detail'),
+    path('api/v1/profiles/<str:profile_pk>/albums/', views.AlbumList.as_view(), name='album-list'),
+    path('api/v1/profiles/<str:profile_pk>/albums/<str:album_pk>/', views.AlbumDetail.as_view(),
+         name='album-detail'),
+    path('api/v1/photos/', views.PhotoList.as_view(), name='photo-list'),
+    path('api/v1/photos/<str:pk>/', views.PhotoDetail.as_view(), name='photo-detail'),
+    path('api/v1/posts/', views.PostList.as_view(), name='post-list'),
+    path('api/v1/posts/<str:pk>/', views.PostDetail.as_view(), name='post-detail')
 ]
 
 urlpatterns = format_suffix_patterns(urlpatterns)

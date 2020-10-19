@@ -240,3 +240,69 @@ class Education(models.Model):
         self.clean()
 
         super().save(*args, **kwargs)
+
+
+class PhotoAlbum(models.Model):
+    name = models.CharField(max_length=50)
+    profile = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='albums')
+
+    def __str__(self):
+        return f"{self.name} album - with {self.num_photos} photos."
+    
+    @property
+    def num_photos(self):
+        return len(Photo.objects.filter(album=self))
+
+
+class Post(models.Model):
+    caption = models.TextField(blank=True)
+    time = models.DateTimeField(auto_now=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="posts")
+    
+    @property
+    def num_likes(self):
+        return len(Like.objects.filter(post=self))
+
+    @property
+    def num_comments(self):
+        return len(Comment.objects.filter(post=self))
+
+    @property
+    def num_shares(self):
+        return len(Comment.objects.filter(post=self))
+
+
+class Like(models.Model):
+    by_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='likes')
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='likes')
+
+    def __str__(self):
+        return f"This like is created by {self.by_user.profile.full_name} in post (id: {self.post.id})"
+
+
+class Comment(models.Model):
+    text = models.TextField()
+    time = models.DateTimeField(auto_now=True)
+    by_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='comments')
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='comments')
+
+    def __str__(self):
+        return f"This comment is created by {self.by_user.profile.full_name} in post (id: {self.post.id})"
+
+
+class Share(models.Model):
+    by_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='shares')
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='shares')
+
+    def __str__(self):
+        return f"This share is created by {self.by_user.profile.full_name} in post (id: {self.post.id}"
+
+
+class Photo(models.Model):
+    photo_url = models.TextField()
+    album = models.ForeignKey(PhotoAlbum, on_delete=models.CASCADE, related_name="photos")
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name="photos")
+    # user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="photos")
+
+    def __str__(self):
+        return f"Photo {self.id} belong to {self.album.name}"
