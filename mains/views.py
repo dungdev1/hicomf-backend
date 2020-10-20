@@ -5,6 +5,7 @@ from django.shortcuts import render
 from django.http import JsonResponse, Http404
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
+from rest_framework.utils import serializer_helpers
 
 from rest_framework.views import APIView
 from rest_framework import status, exceptions
@@ -14,19 +15,20 @@ from rest_framework.reverse import reverse
 from rest_framework.permissions import AllowAny
 
 from mains.serializations import (
-    ProfileSerializer,
+    CommentSerializer, ProfileSerializer,
     AddressSerializer,
     JobSerializer,
     EducationSerializer,
     AlbumSerializer,
     PhotoSerializer,
-    PostSerializer
+    PostSerializer,
+    LikeSerializer, ShareSerializer
 )
 from mains.models import (
     Profile, Address, Job, Education,
-    PhotoAlbum, Photo, Post
+    PhotoAlbum, Photo, Post, Like, Comment, Share
 )
-from mains.permissions import IsOwnerOrReadOnly
+from mains.permissions import IsOwnerOrReadOnly, AllowPostOwnerDelete
 
 
 # Validate scope
@@ -514,4 +516,178 @@ class PhotoDetail(APIView):
     def delete(self, request, pk):
         photo = self.get_object(pk)
         photo.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class LikeList(APIView):
+
+    def get(self, request, post_pk):
+        try:
+            likes = Like.objects.filter(post=post_pk)
+            serializer = LikeSerializer(
+                likes, many=True, context={'request': request})
+            return Response(serializer.data)
+        except ValidationError:
+            raise Http404
+
+    def post(self, request, post_pk):
+        try:
+            serializer = LikeSerializer(
+                data=request.data, context={'request': request})
+            if serializer.is_valid():
+                try:
+                    post = Post.objects.get(pk=post_pk)
+                    serializer.save(post=post, user=request.user)
+                    return Response(serializer.data, status=status.HTTP_201_CREATED)
+                except Post.DoesNotExist:
+                    raise Http404
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except ValidationError:
+            raise Http404
+
+
+class LikeDetail(APIView):
+    permission_classes = [IsOwnerOrReadOnly]
+
+    def get_object(self, post_pk, like_pk):
+        try:
+            like = Like.objects.filter(post=post_pk).get(id=like_pk)
+        except ValidationError:
+            raise Http404
+        except Like.DoesNotExist:
+            raise Http404
+
+        self.check_object_permissions(self.request, like)
+        return like
+
+    def get(self, request, *args, **kwargs):
+        like = self.get_object(**kwargs)
+        serializer = LikeSerializer(like, context={'request': request})
+        url = request.build_absolute_uri(
+            reverse('like-detail', args=(like.post.id, like.id)))
+        profile = request.build_absolute_uri(
+            reverse('profile-detail', args=(like.user.profile.id,)))
+        return Response({'url': url, **serializer.data, 'profile': profile})
+
+    def delete(self, request, *args, **kwargs):
+        like = self.get_object(**kwargs)
+        like.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class CommentList(APIView):
+
+    def get(self, request, post_pk):
+        try:
+            comments = Comment.objects.filter(post=post_pk)
+            serializer = CommentSerializer(comments, many=True, context={'request': request})
+            return Response(serializer.data)
+        except ValidationError:
+            raise Http404
+
+    def post(self, request, post_pk):
+        try:
+            serializer = CommentSerializer(data=request.data, context={'request': request})
+            if serializer.is_valid():
+                try:
+                    post = Post.objects.get(pk=post_pk)
+                    serializer.save(post=post, user=request.user)
+                    return Response(serializer.data, status=status.HTTP_201_CREATED)
+                except Post.DoesNotExist:
+                    raise Http404
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except ValidationError:
+            raise Http404
+
+
+class CommentDetail(APIView):
+    permission_classes = [IsOwnerOrReadOnly|AllowPostOwnerDelete]
+
+    def get_object(self, post_pk, comment_pk):
+        try:
+            comment = Comment.objects.filter(post=post_pk).get(id=comment_pk)
+        except ValidationError:
+            raise Http404
+        except Comment.DoesNotExist:
+            raise Http404
+
+        self.check_object_permissions(self.request, comment)
+        return comment
+    
+    def get(self, request, *args, **kwargs):
+        comment = self.get_object(**kwargs)
+        serializer = CommentSerializer(comment, context={'request': request})
+        url = request.build_absolute_uri(
+            reverse('comment-detail', args=(comment.post.id, comment.id)))
+        profile = request.build_absolute_uri(
+            reverse('profile-detail', args=(comment.user.profile.id,)))
+        return Response({'url': url, **serializer.data, 'profile': profile})
+
+    def put(self, request, *args, **kwargs):
+        comment = self.get_object(**kwargs)
+        serializer = CommentSerializer(comment, data=request.data, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def delete(self, request, *args, **kwargs):
+        comment = self.get_object(**kwargs)
+        comment.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class ShareList(APIView):
+    
+    def get(self, request, post_pk):
+        try:
+            shares = Share.objects.filter(post=post_pk)
+            serializer = ShareSerializer(
+                shares, many=True, context={'request': request})
+            return Response(serializer.data)
+        except ValidationError:
+            raise Http404
+
+    def post(self, request, post_pk):
+        try:
+            serializer = ShareSerializer(
+                data=request.data, context={'request': request})
+            if serializer.is_valid():
+                try:                    
+                    post = Post.objects.get(pk=post_pk)
+                    serializer.save(post=post, user=request.user)
+                    return Response(serializer.data, status=status.HTTP_201_CREATED)
+                except Post.DoesNotExist:
+                    raise Http404
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except ValidationError:
+            raise Http404
+
+
+class ShareDetail(APIView):
+    permission_classes = [IsOwnerOrReadOnly]
+
+    def get_object(self, post_pk, share_pk):
+        try:
+            share = Share.objects.filter(post=post_pk).get(id=share_pk)
+        except ValidationError:
+            raise Http404
+        except Share.DoesNotExist:
+            raise Http404
+
+        self.check_object_permissions(self.request, share)
+        return share
+
+    def get(self, request, *args, **kwargs):
+        share = self.get_object(**kwargs)
+        serializer = ShareSerializer(share, context={'request': request})
+        url = request.build_absolute_uri(
+            reverse('share-detail', args=(share.post.id, share.id)))
+        profile = request.build_absolute_uri(
+            reverse('profile-detail', args=(share.user.profile.id,)))
+        return Response({'url': url, **serializer.data, 'profile': profile})
+
+    def delete(self, request, *args, **kwargs):
+        share = self.get_object(**kwargs)
+        share.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)

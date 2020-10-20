@@ -1,3 +1,4 @@
+from django.db.models import fields
 from mains.models import (
     Profile, Address, Job, Education,
     PhotoAlbum, Photo,
@@ -48,7 +49,40 @@ class AlbumHyperlink(serializers.HyperlinkedRelatedField):
         url_kwargs = {
             'profile_pk': obj.profile.id,
             'album_pk': obj.id
-        }        
+        }
+        return reverse(view_name, kwargs=url_kwargs, request=request, format=format)
+
+
+class LikeHyperlink(serializers.HyperlinkedRelatedField):
+    view_name = 'like-detail'
+
+    def get_url(self, obj, view_name, request, format):
+        url_kwargs = {
+            'post_pk': obj.post.id,
+            'like_pk': obj.id
+        }
+        return reverse(view_name, kwargs=url_kwargs, request=request, format=format)
+
+
+class CommentHyperlink(serializers.HyperlinkedRelatedField):
+    view_name = 'comment-detail'
+
+    def get_url(self, obj, view_name, request, format):
+        url_kwargs = {
+            'post_pk': obj.post.id,
+            'comment_pk': obj.id
+        }
+        return reverse(view_name, kwargs=url_kwargs, request=request, format=format)
+
+
+class ShareHyperlink(serializers.HyperlinkedRelatedField):
+    view_name = 'share-detail'
+
+    def get_url(self, obj, view_name, request, format):
+        url_kwargs = {
+            'post_pk': obj.post.id,
+            'share_pk': obj.id
+        }
         return reverse(view_name, kwargs=url_kwargs, request=request, format=format)
 
 
@@ -103,11 +137,14 @@ class EducationSerializer(serializers.HyperlinkedModelSerializer):
 class PostSerializer(serializers.HyperlinkedModelSerializer):
     photos = serializers.HyperlinkedRelatedField(
         view_name='photo-detail', many=True, read_only=True)
+    likes = LikeHyperlink(read_only=True, many=True)
+    comments = CommentHyperlink(read_only=True, many=True)
+    shares = ShareHyperlink(read_only=True, many=True)
 
     class Meta:
         model = Post
-        fields = ['url', 'id', 'caption', 'time', 'photos',
-                  'num_likes', 'num_comments', 'num_shares']
+        fields = ['url', 'id', 'caption', 'time', 'photos', 'num_likes',
+                  'num_comments', 'num_shares', 'likes', 'comments', 'shares']
 
 
 class AlbumSerializer(serializers.HyperlinkedModelSerializer):
@@ -129,3 +166,33 @@ class PhotoSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Photo
         fields = ['url', 'id', 'photo_url', 'post']
+
+
+class LikeSerializer(serializers.HyperlinkedModelSerializer):
+    post = serializers.HyperlinkedRelatedField(
+        view_name='post-detail', read_only=True)
+    url = LikeHyperlink(read_only=True)
+
+    class Meta:
+        model = Like
+        fields = ['url', 'id', 'post']
+
+
+class CommentSerializer(serializers.HyperlinkedModelSerializer):
+    post = serializers.HyperlinkedRelatedField(
+        view_name='post-detail', read_only=True)
+    url = CommentHyperlink(read_only=True)
+
+    class Meta:
+        model = Comment
+        fields = ['url', 'id', 'text', 'time', 'post']
+
+
+class ShareSerializer(serializers.HyperlinkedModelSerializer):
+    post = serializers.HyperlinkedRelatedField(
+        view_name='post-detail', read_only=True)
+    url = ShareHyperlink(read_only=True)
+
+    class Meta:
+        model = Share
+        fields = ['url', 'id', 'post']

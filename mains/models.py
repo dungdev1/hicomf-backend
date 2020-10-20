@@ -269,33 +269,33 @@ class Post(models.Model):
 
     @property
     def num_shares(self):
-        return len(Comment.objects.filter(post=self))
+        return len(Share.objects.filter(post=self))
 
 
 class Like(models.Model):
-    by_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='likes')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='likes', verbose_name="by user")
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='likes')
 
     def __str__(self):
-        return f"This like is created by {self.by_user.profile.full_name} in post (id: {self.post.id})"
+        return f"This like is created by {self.user.profile.full_name} in post (id: {self.post.id})"
 
 
 class Comment(models.Model):
     text = models.TextField()
     time = models.DateTimeField(auto_now=True)
-    by_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='comments')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='comments', verbose_name="by user")
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='comments')
 
     def __str__(self):
-        return f"This comment is created by {self.by_user.profile.full_name} in post (id: {self.post.id})"
+        return f"This comment is created by {self.user.profile.full_name} in post (id: {self.post.id})"
 
 
 class Share(models.Model):
-    by_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='shares')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='shares', verbose_name="by user")
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='shares')
 
     def __str__(self):
-        return f"This share is created by {self.by_user.profile.full_name} in post (id: {self.post.id}"
+        return f"This share is created by {self.user.profile.full_name} in post (id: {self.post.id}"
 
 
 class Photo(models.Model):
