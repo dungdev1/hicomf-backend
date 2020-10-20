@@ -4,9 +4,9 @@ import json
 import jwt
 import requests
 import os
-from dotenv import load_dotenv
+# from dotenv import load_dotenv
 
-load_dotenv()
+# load_dotenv()
 
 
 # Function that map the sub field from the access_token to the username,
@@ -20,7 +20,7 @@ def jwt_get_username_from_payload_handler(payload):
 # Function to fetch the JWKS from the Auth0 account to verify and decode the incoming Access Token
 def jwt_decode_token(token):
 	header = jwt.get_unverified_header(token)
-	jwks = requests.get(f"{os.getenv('AUTH0_DOMAIN')}.well-known/jwks.json").json()
+	jwks = requests.get(f"{os.environ['AUTH0_DOMAIN']}.well-known/jwks.json").json()
 	public_key = None
 	for jwk in jwks['keys']:
 	    if jwk['kid'] == header['kid']:
@@ -29,5 +29,5 @@ def jwt_decode_token(token):
 	if public_key is None:
 		raise Exception('Public key not found.')
 
-	issuer = 'https://{}/'.format('dev-1imx6cpn.au.auth0.com')
-	return jwt.decode(token, public_key, audience=os.getenv('API_IDENTIFIER'), issuer=issuer, algorithms=['RS256'])
+	issuer = os.environ['AUTH0_DOMAIN']
+	return jwt.decode(token, public_key, audience=os.environ['API_IDENTIFIER'], issuer=issuer, algorithms=['RS256'])
