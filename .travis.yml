@@ -12,6 +12,6 @@ script:
 deploy:
     provider: heroku
     api_key: $HEROKU_API_KEY
-    app: hicomf
+    app: hicomfbackend
     run: python manage.py migrate
     on: master

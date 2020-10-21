@@ -1,1 +1,1 @@
-web: gunicorn hicomf.wsgi
+web: gunicorn hicomfbackend.wsgi

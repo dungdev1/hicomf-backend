@@ -2,7 +2,6 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser, User
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
-import uuid
 
 from django.core.exceptions import ValidationError
 
@@ -14,7 +13,6 @@ from .signals import (
 )
 
 class Profile(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     first_name = models.CharField(max_length=30, blank=True)
     last_name = models.CharField(max_length=30, blank=True)
     bio = models.CharField(max_length=100, blank=True)
@@ -60,7 +58,6 @@ class Profile(models.Model):
 
 
 class Address(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     city = models.CharField(max_length=50)
     district = models.CharField(max_length=50, blank=True)
     street = models.CharField(max_length=50, blank=True)
@@ -72,7 +69,6 @@ class Address(models.Model):
 
 
 class FriendshipRequest(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     from_user = models.ForeignKey(User, related_name="invitations_from", on_delete=models.CASCADE, to_field='username')
     to_user = models.ForeignKey(User, related_name="invitations_to", on_delete=models.CASCADE, to_field='username')
     message = models.CharField(max_length=200, blank=True)
@@ -140,7 +136,6 @@ class FriendshipManager(models.Manager):
 
 
 class Friendship(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.OneToOneField(User, related_name='friendship', on_delete=models.CASCADE, to_field='username')
     friends = models.ManyToManyField('self')
 
@@ -151,7 +146,6 @@ class Friendship(models.Model):
 
 
 class Job(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     position = models.CharField(max_length=200)
     company = models.CharField(max_length=200)
     description = models.CharField(max_length=300, blank=True)
@@ -200,7 +194,6 @@ class Job(models.Model):
 
     
 class Education(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     school_name = models.CharField(max_length=100)
     starting_year = models.IntegerField(null=True)
     ending_year = models.IntegerField(null=True)
