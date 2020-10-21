@@ -2,7 +2,6 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser, User
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
-import uuid
 
 from django.core.exceptions import ValidationError
 
@@ -14,7 +13,6 @@ from .signals import (
 )
 
 class Profile(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     first_name = models.CharField(max_length=30, blank=True)
     last_name = models.CharField(max_length=30, blank=True)
     bio = models.CharField(max_length=100, blank=True)
@@ -60,7 +58,6 @@ class Profile(models.Model):
 
 
 class Address(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     city = models.CharField(max_length=50)
     district = models.CharField(max_length=50, blank=True)
     street = models.CharField(max_length=50, blank=True)
@@ -72,7 +69,6 @@ class Address(models.Model):
 
 
 class FriendshipRequest(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     from_user = models.ForeignKey(User, related_name="invitations_from", on_delete=models.CASCADE, to_field='username')
     to_user = models.ForeignKey(User, related_name="invitations_to", on_delete=models.CASCADE, to_field='username')
     message = models.CharField(max_length=200, blank=True)
@@ -140,7 +136,6 @@ class FriendshipManager(models.Manager):
 
 
 class Friendship(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.OneToOneField(User, related_name='friendship', on_delete=models.CASCADE, to_field='username')
     friends = models.ManyToManyField('self')
 
@@ -151,10 +146,9 @@ class Friendship(models.Model):
 
 
 class Job(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    position = models.CharField(max_length=100)
-    company = models.CharField(max_length=100)
-    description = models.CharField(max_length=200)
+    position = models.CharField(max_length=200)
+    company = models.CharField(max_length=200)
+    description = models.CharField(max_length=300, blank=True)
     city = models.CharField(max_length=100)
     starting_month = models.IntegerField()
     starting_year = models.IntegerField()
@@ -164,7 +158,7 @@ class Job(models.Model):
     profile = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name="jobs")
     
     def __str__(self):
-        if self.ending_month is None and self.ending_year is None:
+        if self.still_working:
             return f"{self.position} at {self.company} ({self.starting_month}/{self.starting_year} - now)"
         return f"{self.position} at {self.company} ({self.starting_month}/{self.starting_year} - {self.ending_month}/{self.ending_year})"
 
@@ -185,7 +179,7 @@ class Job(models.Model):
 
     def get_working_time(self):
         ending_month, ending_year = None, None
-        if self.ending_month == None and self.ending_year == None:
+        if self.still_working:
             ending_month = timezone.now().month
             ending_year = timezone.now().year
         else:
@@ -200,15 +194,14 @@ class Job(models.Model):
 
     
 class Education(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     school_name = models.CharField(max_length=100)
-    starting_year = models.IntegerField()
-    ending_year = models.IntegerField(null=True, blank=True)
+    starting_year = models.IntegerField(null=True)
+    ending_year = models.IntegerField(null=True)
     graduated = models.BooleanField(default=False)
-    description = models.TextField()
+    description = models.TextField(blank=True)
     concentration = models.CharField(max_length=100)
     degree = models.CharField(max_length=150, blank=True)
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="educations", to_field='username')
+    profile = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name="educations")
     
 
     class Privacy(models.TextChoices):
@@ -233,10 +226,76 @@ class Education(models.Model):
             return f"Studies {string.capwords(self.concentration)} at {string.capwords(self.school_name)}"
 
     def clean(self):
-        if self.ending_year < self.starting_year:
+        if self.ending_year and self.ending_year < self.starting_year:
             raise ValidationError("The starting year must be greater than the ending year")
 
     def save(self, *args, **kwargs):
         self.clean()
 
         super().save(*args, **kwargs)
+
+
+class PhotoAlbum(models.Model):
+    name = models.CharField(max_length=50)
+    profile = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='albums')
+
+    def __str__(self):
+        return f"{self.name} album - with {self.num_photos} photos."
+    
+    @property
+    def num_photos(self):
+        return len(Photo.objects.filter(album=self))
+
+
+class Post(models.Model):
+    caption = models.TextField(blank=True)
+    time = models.DateTimeField(auto_now=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="posts")
+    
+    @property
+    def num_likes(self):
+        return len(Like.objects.filter(post=self))
+
+    @property
+    def num_comments(self):
+        return len(Comment.objects.filter(post=self))
+
+    @property
+    def num_shares(self):
+        return len(Share.objects.filter(post=self))
+
+
+class Like(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='likes', verbose_name="by user")
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='likes')
+
+    def __str__(self):
+        return f"This like is created by {self.user.profile.full_name} in post (id: {self.post.id})"
+
+
+class Comment(models.Model):
+    text = models.TextField()
+    time = models.DateTimeField(auto_now=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='comments', verbose_name="by user")
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='comments')
+
+    def __str__(self):
+        return f"This comment is created by {self.user.profile.full_name} in post (id: {self.post.id})"
+
+
+class Share(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='shares', verbose_name="by user")
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='shares')
+
+    def __str__(self):
+        return f"This share is created by {self.user.profile.full_name} in post (id: {self.post.id}"
+
+
+class Photo(models.Model):
+    photo_url = models.TextField()
+    album = models.ForeignKey(PhotoAlbum, on_delete=models.CASCADE, related_name="photos")
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name="photos")
+    # user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="photos")
+
+    def __str__(self):
+        return f"Photo {self.id} belong to {self.album.name}"

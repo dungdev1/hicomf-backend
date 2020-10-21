@@ -12,9 +12,6 @@ https://docs.djangoproject.com/en/3.1/ref/settings/
 
 from pathlib import Path
 import os
-from dotenv import load_dotenv
-
-load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -82,8 +79,10 @@ JWT_AUTH = {
     'JWT_DECODE_HANDLER':
         'auth0authorization.utils.jwt_decode_token',
     'JWT_ALGORITHM': 'RS256',
-    'JWT_AUDIENCE': os.getenv('API_IDENTIFIER'),
-    'JWT_ISSUER': os.getenv('AUTH0_DOMAIN'),
+    # 'JWT_AUDIENCE': os.getenv('API_IDENTIFIER'), #os.environ['API_IDENTIFIER'],
+    # 'JWT_ISSUER': os.getenv('AUTH0_DOMAIN'), #os.environ['AUTH0_DOMAIN'],
+    'JWT_AUDIENCE': os.environ['API_IDENTIFIER'],
+    'JWT_ISSUER': os.environ['AUTH0_DOMAIN'],
     'JWT_AUTH_HEADER_PREFIX': 'Bearer',
 }
 
@@ -112,9 +111,25 @@ WSGI_APPLICATION = 'hicomfbackend.wsgi.application'
 # https://docs.djangoproject.com/en/3.1/ref/settings/#databases
 
 DATABASES = {
+    # 'default': {
+    #     'ENGINE': 'django.db.backends.sqlite3',
+    #     'NAME': BASE_DIR / 'db.sqlite3',
+    # }
+    # 'default': {
+    #     'ENGINE': 'django.db.backends.postgresql',
+    #     'NAME': os.getenv('DATABASE_NAME'), #os.environ['DATABASE_NAME'],
+    #     'USER': os.getenv('DATABASE_USER'), #os.environ['DATABASE_USER'],
+    #     'PASSWORD': os.getenv('DATABASE_PASSWORD'), #os.environ['DATABASE_PASSWORD'],
+    #     'HOST': os.getenv('DATABASE_HOST'), #os.environ['DATABASE_HOST'],
+    #     'PORT': os.getenv('DATABASE_PORT'), #os.environ['DATABASE_PORT'],
+    # }
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.environ['DATABASE_NAME'],
+        'USER': os.environ['DATABASE_USER'],
+        'PASSWORD': os.environ['DATABASE_PASSWORD'],
+        'HOST': os.environ['DATABASE_HOST'],
+        'PORT': os.environ['DATABASE_PORT'],
     }
 }
 

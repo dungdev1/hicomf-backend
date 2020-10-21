@@ -175,10 +175,10 @@ class EducationModelTest(TestCase):
             description="Senior Student",
             concentration="Computer science",
             degree="Barchelor",
-            user=u
+            profile=u.profile
         )
         e1.save()
 
     def test_validated_data(self):
         u = User.objects.get(username="dungdev1")
-        print(u.educations.all()[0])
+        print(u.profile.educations.all()[0])
