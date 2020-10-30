@@ -21,7 +21,8 @@ class Profile(models.Model):
         choices=[
             ('FEMALE', 'Female'),
             ('MALE', 'Male')
-        ]
+        ],
+        blank=True
     )
     birthday = models.DateField(null=True)
     relationship = models.CharField(max_length=50, blank=True)
@@ -295,7 +296,7 @@ class Photo(models.Model):
     photo_url = models.TextField()
     album = models.ForeignKey(PhotoAlbum, on_delete=models.CASCADE, related_name="photos")
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name="photos")
-    # user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="photos")
+    is_active = models.BooleanField(null=True)
 
     def __str__(self):
         return f"Photo {self.id} belong to {self.album.name}"
