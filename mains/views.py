@@ -88,10 +88,20 @@ def profile_list(request):
         return Response(serializer.data)
 
     elif request.method == 'POST':
+        user_avatar = request.data.pop('user_avatar')
         serializer = ProfileSerializer(
             data=request.data, context={'request': request})
         if serializer.is_valid():
-            serializer.save()
+            serializer.save(user=request.user)
+            # Has Profile, create Album, Post and Photo
+            profile = Profile.objects.get(user=request.user)
+            album = PhotoAlbum.objects.create(name='avatar', profile=profile)
+            post = Post.objects.create(
+                caption=f"{profile.full_name} has updated his avatar",
+                user=profile.user
+            )
+            Photo.objects.create(
+                photo_url=user_avatar, album=album, post=post, is_active=True)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -399,11 +409,21 @@ class PostList(APIView):
 
     def get(self, request):
         queryset = Post.objects.all()
-        username = request.query_params.get('username', None)
-        if username is not None:
-            queryset = queryset.filter(user=username)
+        profile_id = request.query_params.get('profile', None)
+        if profile_id is not None:
+            queryset = queryset.filter(user_profile=profile_id)
         serializer = PostSerializer(
             queryset, many=True, context={'request': request})
+        for i, post in enumerate(queryset):
+            profile = request.build_absolute_uri(
+                reverse('profile-detail', args=(post.user.profile.id,)))
+            serializer.data[i]['profile'] = profile
+            serializer.data[i]['owner_name'] = post.user.profile.full_name
+            for album in post.user.profile.albums.all():
+                if album.name == 'avatar':
+                    for photo in album.photos.all():
+                        if photo.is_active:
+                            serializer.data[i]['owner_pic'] = photo.photo_url
         return Response(serializer.data)
 
     def post(self, request):
@@ -454,15 +474,24 @@ class PhotoList(APIView):
 
     def get(self, request):
         queryset = Photo.objects.all()
-        username = request.query_params.get('username', None)
-        album = request.query_params.get('album', None)
-        if username is not None:
-            queryset = queryset.filter(post__user=username)
-        if album is not None:
-            queryset = queryset.filter(album=album)
-        serializer = PhotoSerializer(
-            queryset, many=True, context={'request': request})
-        return Response(serializer.data)
+        profile_param = request.query_params.get('profile_id', None)
+        album_param = request.query_params.get('album', None)
+        if profile_param is not None:
+            queryset = queryset.filter(post__user__profile=profile_param)
+            if album_param is not None:
+                try:
+                    album = PhotoAlbum.objects.get(pk=album_param)
+                    queryset = queryset.filter(album=album)
+                    if album.name == 'avatar':
+                        serializer = PhotoSerializer(queryset.get(
+                            is_active=True), context={'request': request})
+                        return Response(serializer.data)
+                except PhotoAlbum.DoesNotExist:
+                    raise Http404
+
+            serializer = PhotoSerializer(
+                queryset, many=True, context={'request': request})
+            return Response(serializer.data)
 
     def post(self, request):
         try:
@@ -580,14 +609,16 @@ class CommentList(APIView):
     def get(self, request, post_pk):
         try:
             comments = Comment.objects.filter(post=post_pk)
-            serializer = CommentSerializer(comments, many=True, context={'request': request})
+            serializer = CommentSerializer(
+                comments, many=True, context={'request': request})
             return Response(serializer.data)
         except ValidationError:
             raise Http404
 
     def post(self, request, post_pk):
         try:
-            serializer = CommentSerializer(data=request.data, context={'request': request})
+            serializer = CommentSerializer(
+                data=request.data, context={'request': request})
             if serializer.is_valid():
                 try:
                     post = Post.objects.get(pk=post_pk)
@@ -601,7 +632,7 @@ class CommentList(APIView):
 
 
 class CommentDetail(APIView):
-    permission_classes = [IsOwnerOrReadOnly|AllowPostOwnerDelete]
+    permission_classes = [IsOwnerOrReadOnly | AllowPostOwnerDelete]
 
     def get_object(self, post_pk, comment_pk):
         try:
@@ -613,7 +644,7 @@ class CommentDetail(APIView):
 
         self.check_object_permissions(self.request, comment)
         return comment
-    
+
     def get(self, request, *args, **kwargs):
         comment = self.get_object(**kwargs)
         serializer = CommentSerializer(comment, context={'request': request})
@@ -625,12 +656,13 @@ class CommentDetail(APIView):
 
     def put(self, request, *args, **kwargs):
         comment = self.get_object(**kwargs)
-        serializer = CommentSerializer(comment, data=request.data, context={'request': request})
+        serializer = CommentSerializer(
+            comment, data=request.data, context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
     def delete(self, request, *args, **kwargs):
         comment = self.get_object(**kwargs)
         comment.delete()
@@ -638,7 +670,7 @@ class CommentDetail(APIView):
 
 
 class ShareList(APIView):
-    
+
     def get(self, request, post_pk):
         try:
             shares = Share.objects.filter(post=post_pk)
@@ -653,7 +685,7 @@ class ShareList(APIView):
             serializer = ShareSerializer(
                 data=request.data, context={'request': request})
             if serializer.is_valid():
-                try:                    
+                try:
                     post = Post.objects.get(pk=post_pk)
                     serializer.save(post=post, user=request.user)
                     return Response(serializer.data, status=status.HTTP_201_CREATED)
