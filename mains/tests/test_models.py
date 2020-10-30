@@ -23,14 +23,16 @@ class ProfileModelTest(TestCase):
         u2 = User.objects.create_user(
             username="1712371", password="12345", first_name="Dung", last_name="Nguyen")
 
+        # Creaet Profile manually.
+        p1 = Profile.objects.create(user=u1)
+        p2 = Profile.objects.create(user=u2)
+
         # Update profile
-        p1 = Profile.objects.get(user=u1)
         p1.bio = "Hello World"
         p1.birthday = date(1999, 2, 10)
         p1.relationship = "Single"
         p1.save()
 
-        p2 = Profile.objects.get(user=u2)
         p2.bio = "Hello World"
         p2.birthday = date(1999, 12, 20)
         p2.relationship = "Single"
@@ -141,6 +143,7 @@ class JobModelTest(TestCase):
     def setUp(self):
         u = User.objects.create_user(
             "dungdev1", password="12345", first_name="Dung", last_name="Nguyen")
+        p = Profile.objects.create(user=u)
         j1 = Job.objects.create(
             profile=u.profile, starting_month=2, starting_year=2008, ending_month=10, ending_year=2020)
         j2 = Job.objects.create(
@@ -168,6 +171,7 @@ class EducationModelTest(TestCase):
     def setUp(self):
         u = User.objects.create_user(
             "dungdev1", password="12345", first_name="Dung", last_name="Nguyen")
+        Profile.objects.create(user=u)
         e1 = Education(
             school_name="University of Science",
             starting_year=2017,
