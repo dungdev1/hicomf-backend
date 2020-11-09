@@ -41,6 +41,7 @@ urlpatterns = [
          views.ShareList.as_view(), name='share-list'),
     path('api/v1/posts/<str:post_pk>/shares/<str:share_pk>/',
          views.ShareDetail.as_view(), name='share-detail'),
+    path('api/v1/user/', views.UserDetail.as_view(), name='user-detail'),
 ]
 
 urlpatterns = format_suffix_patterns(urlpatterns)

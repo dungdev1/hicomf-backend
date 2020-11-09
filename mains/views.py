@@ -82,9 +82,30 @@ def profile_list(request):
     List all users, or create a new profile.
     """
     if request.method == 'GET':
-        profiles = Profile.objects.all()
+        queryset = []
+        post_id = request.query_params.get('postId', None)
+        content = request.query_params.get('content', None)
+        if post_id and content:
+            if content == 'like':
+                likes = Post.objects.get(pk=post_id).likes.all()
+                for like in likes:
+                    profile = like.user.profile
+                    queryset.append(profile)
+            elif content == 'comment':
+                comments = Post.objects.get(pk=post_id).comments.all()
+                for comment in comments:
+                    profile = comment.user.profile
+                    queryset.append(profile)
+            elif content == 'share':
+                shares = Post.objects.get(pk=post_id).shares.all()
+                for share in shares:
+                    profile = share.user.profile
+                    queryset.append(profile)
+        else:
+            queryset = Profile.objects.all()
+
         serializer = ProfileSerializer(
-            profiles, many=True, context={'request': request})
+            queryset, many=True, context={'request': request})
         return Response(serializer.data)
 
     elif request.method == 'POST':
@@ -427,10 +448,21 @@ class PostList(APIView):
         return Response(serializer.data)
 
     def post(self, request):
+        photos_url = request.data.pop('imageUrl', None)
         serializer = PostSerializer(
             data=request.data, context={'request': request})
         if serializer.is_valid():
             serializer.save(user=request.user)
+            post = Post.objects.latest('time')
+            if photos_url is not None:
+                for photo_url in photos_url:
+                    try:
+                        photo_album = PhotoAlbum.objects.get(name='postPhoto')
+                    except PhotoAlbum.DoesNotExist:
+                        photo_album = PhotoAlbum.objects.create(
+                            name="postPhoto", profile=request.user.profile)                                
+                    Photo.objects.create(photo_url=photo_url, album=photo_album, post=post)
+
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -723,3 +755,24 @@ class ShareDetail(APIView):
         share = self.get_object(**kwargs)
         share.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class UserDetail(APIView):
+    
+    def get(self, request):
+        profile = Profile.objects.get(user=request.user)
+        serializer = ProfileSerializer(profile, context={'request': request})
+        likes = Like.objects.filter(user=request.user)
+        postsId = []
+        for like in likes:
+            postsId.append({
+                "post_id": like.post.id,
+                "like_id": like.id
+            })
+        data = {**serializer.data, "liked_postsId": postsId}
+        for album in profile.albums.all():
+            if album.name == 'avatar':
+                for photo in album.photos.all():
+                    if photo.is_active:
+                        return Response({**data, 'avatar': photo.photo_url})
+        return Response(data)
