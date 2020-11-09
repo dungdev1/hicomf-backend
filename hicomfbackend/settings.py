@@ -179,5 +179,5 @@ STATIC_URL = '/static/'
 # AUTH_USER_MODEL = 'mains.CustomUser'
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
+    "https://hicomf-d730c.firebaseapp.com/",
 ]
