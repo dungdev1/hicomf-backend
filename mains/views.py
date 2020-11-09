@@ -432,7 +432,8 @@ class PostList(APIView):
         queryset = Post.objects.all()
         profile_id = request.query_params.get('profile', None)
         if profile_id is not None:
-            queryset = queryset.filter(user_profile=profile_id)
+            user = Profile.objects.get(pk=profile_id).user
+            queryset = queryset.filter(user=user)
         serializer = PostSerializer(
             queryset, many=True, context={'request': request})
         for i, post in enumerate(queryset):
