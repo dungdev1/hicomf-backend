@@ -454,6 +454,7 @@ class PostList(APIView):
             data=request.data, context={'request': request})
         if serializer.is_valid():
             serializer.save(user=request.user)
+            data = {**serializer.data}
             post = Post.objects.latest('time')
             if photos_url is not None:
                 for photo_url in photos_url:
@@ -463,8 +464,18 @@ class PostList(APIView):
                         photo_album = PhotoAlbum.objects.create(
                             name="postPhoto", profile=request.user.profile)                                
                     Photo.objects.create(photo_url=photo_url, album=photo_album, post=post)
-
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            serializer = PostSerializer(post, context={'request': request})
+            data = {**serializer.data}
+            profile = request.build_absolute_uri(
+                reverse('profile-detail', args=(post.user.profile.id,)))
+            data['profile'] = profile
+            data['owner_name'] = post.user.profile.full_name
+            for album in post.user.profile.albums.all():
+                if album.name == 'avatar':
+                    for photo in album.photos.all():
+                        if photo.is_active:
+                            data['owner_pic'] = photo.photo_url
+            return Response(data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
