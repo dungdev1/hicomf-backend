@@ -5,6 +5,7 @@ from django.shortcuts import render
 from django.http import JsonResponse, Http404
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
+from rest_framework.status import HTTP_202_ACCEPTED
 from rest_framework.utils import serializer_helpers
 
 from rest_framework.views import APIView
@@ -113,7 +114,10 @@ def profile_list(request):
         serializer = ProfileSerializer(
             data=request.data, context={'request': request})
         if serializer.is_valid():
-            serializer.save(user=request.user)
+            try:
+                serializer.save(user=request.user)
+            except:
+                return Response(status=HTTP_202_ACCEPTED)
             # Has Profile, create Album, Post and Photo
             profile = Profile.objects.get(user=request.user)
             album = PhotoAlbum.objects.create(name='avatar', profile=profile)
