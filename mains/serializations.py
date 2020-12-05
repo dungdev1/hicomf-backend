@@ -181,11 +181,10 @@ class LikeSerializer(serializers.HyperlinkedModelSerializer):
 class CommentSerializer(serializers.HyperlinkedModelSerializer):
     post = serializers.HyperlinkedRelatedField(
         view_name='post-detail', read_only=True)
-    url = CommentHyperlink(read_only=True)
-
+        
     class Meta:
         model = Comment
-        fields = ['url', 'id', 'text', 'time', 'post']
+        fields = ['id', 'text', 'time', 'post']
 
 
 class ShareSerializer(serializers.HyperlinkedModelSerializer):

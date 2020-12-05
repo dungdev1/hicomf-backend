@@ -150,11 +150,24 @@ class ProfileDetail(APIView):
         return Response(serializer.data)
 
     def put(self, request, pk, format=None):
+        user_avatar = request.data.pop('user_avatar', None)
         profile = self.get_object(pk)
         serializer = ProfileSerializer(
             profile, data=request.data, context={'request': request})
         if serializer.is_valid():
             serializer.save()
+            if user_avatar is not None:
+                album = PhotoAlbum.objects.get(name='avatar', profile=profile)
+                post = Post.objects.create(
+                    caption=f"{profile.full_name} has updated his avatar",
+                    user=profile.user
+                )
+                current_avatar = Photo.objects.get(album=album, is_active=True)
+                current_avatar.is_active = False
+                current_avatar.save()
+                photo = Photo.objects.create(
+                    photo_url=user_avatar, album=album, post=post, is_active=True)
+                return Response({**serializer.data, 'avatar': photo.photo_url})
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -659,6 +672,19 @@ class CommentList(APIView):
             comments = Comment.objects.filter(post=post_pk)
             serializer = CommentSerializer(
                 comments, many=True, context={'request': request})
+            for i, comment in enumerate(comments):                
+                profile = request.build_absolute_uri(
+                    reverse('profile-detail', args=(comment.user.profile.id,))
+                )
+                serializer.data[i]['profile_id'] = comment.user.profile.id
+                serializer.data[i]['profile'] = profile
+                serializer.data[i]['owner_name'] = comment.user.profile.full_name
+                serializer.data[i]['post_id'] = comment.post.id
+                for album in comment.user.profile.albums.all():
+                    if album.name == 'avatar':
+                        for photo in album.photos.all():
+                            if photo.is_active:
+                                serializer.data[i]['owner_pic'] = photo.photo_url
             return Response(serializer.data)
         except ValidationError:
             raise Http404
@@ -670,8 +696,21 @@ class CommentList(APIView):
             if serializer.is_valid():
                 try:
                     post = Post.objects.get(pk=post_pk)
-                    serializer.save(post=post, user=request.user)
-                    return Response(serializer.data, status=status.HTTP_201_CREATED)
+                    instance = serializer.save(post=post, user=request.user)
+                    data = {**serializer.data}
+                    data['post_id'] = post.id
+                    data['profile_id'] = post.user.profile.id
+                    profile = request.build_absolute_uri(
+                        reverse('profile-detail', args=(data['profile_id'],))
+                    )
+                    data['profile'] = profile
+                    data['owner_name'] = instance.user.profile.full_name                    
+                    for album in instance.user.profile.albums.all():
+                        if album.name == 'avatar':
+                            for photo in album.photos.all():
+                                if photo.is_active:
+                                    data['owner_pic'] = photo.photo_url
+                    return Response(data, status=status.HTTP_201_CREATED)
                 except Post.DoesNotExist:
                     raise Http404
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
