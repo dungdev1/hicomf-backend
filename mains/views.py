@@ -82,6 +82,7 @@ def profile_list(request):
     """
     List all users, or create a new profile.
     """
+    asdsads
     if request.method == 'GET':
         queryset = []
         post_id = request.query_params.get('postId', None)
