@@ -82,7 +82,6 @@ def profile_list(request):
     """
     List all users, or create a new profile.
     """
-    asdsads
     if request.method == 'GET':
         queryset = []
         post_id = request.query_params.get('postId', None)
@@ -447,6 +446,7 @@ class AlbumDetail(APIView):
 class PostList(APIView):
 
     def get(self, request):
+        x = 3/0
         queryset = Post.objects.all()
         profile_id = request.query_params.get('profile', None)
         if profile_id is not None:
