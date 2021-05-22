@@ -446,7 +446,6 @@ class AlbumDetail(APIView):
 class PostList(APIView):
 
     def get(self, request):
-        x = 3/0
         queryset = Post.objects.all()
         profile_id = request.query_params.get('profile', None)
         if profile_id is not None:
